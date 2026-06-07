@@ -1,6 +1,7 @@
 # 直连补充列表
 
 # 域名后缀匹配
+IP-CIDR,223.109.148.0/24,no-resolve
 DOMAIN-SUFFIX,shujupie.com
 DOMAIN-SUFFIX,umini.shujupie.com
 DOMAIN-SUFFIX,kaiyun.ai

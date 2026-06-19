@@ -1,0 +1,178 @@
+# =============================================
+# Clash Mi 完整覆写配置（Mihomo 内核）
+# 版本示例 - 2026 更新
+# 包含核心 + TUN + DNS + 策略组框架 + 规则锚点
+# 小白可直接使用，高级用户按需修改
+# =============================================
+
+# ==================== 基础核心设置 ====================
+mode: rule
+ipv6: true
+mixed-port: 7890
+allow-lan: true
+bind-address: "*"
+log-level: warning
+unified-delay: true
+tcp-concurrent: true
+find-process-mode: strict
+
+profile:
+  store-selected: true
+  store-fake-ip: true
+
+# ==================== TUN 模式（强烈推荐系统代理） ====================
+tun:
+  enable: true
+  stack: mixed
+  dns-hijack:
+    - udp://any:53
+    - tcp://any:53
+  auto-route: true
+  auto-detect-interface: true
+  auto-redirect: true
+  strict-route: false
+  endpoint-independent-nat: true
+
+# ==================== 域名嗅探 ====================
+sniffer:
+  enable: true
+  override-destination: true
+  parse-pure-ip: true
+  force-dns-mapping: true
+  sniff:
+    HTTP:
+      ports: [80, 8080-8880]
+    TLS:
+      ports: [443, 8443]
+    QUIC:
+      ports: [443]
+  force-domain:
+    - "+.netflix.com"
+    - "+.nflxvideo.net"
+  skip-domain:
+    - "+.oray.com"
+    - "+.sunlogin.net"
+    - "+.push.apple.com"
+
+# ==================== DNS（防泄漏） ====================
+dns:
+  enable: true
+  listen: 0.0.0.0:7874
+  ipv6: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter-mode: blacklist
+  fake-ip-filter:
+    - "+.lan"
+    - "geosite:cn"
+  nameserver:
+    - 223.5.5.5
+    - 114.114.114.114
+    - tls://8.8.8.8
+  proxy-server-nameserver:
+    - https://doh.pub/dns-query
+  nameserver-policy:
+    "geosite:cn,private":
+      - 223.5.5.5
+      - 114.114.114.114
+
+# ==================== Geo 数据 ====================
+geo-auto-update: true
+geo-update-interval: 24
+geodata-mode: true
+geox-url:
+  geoip: https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat
+  geosite: https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat
+  mmdb: https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/country.mmdb
+
+# ==================== 外部控制器（面板） ====================
+external-controller: 0.0.0.0:9090
+external-ui-name: zashboard
+external-ui-url: https://github.com/Zephyruso/zashboard/releases/latest/download/dist.zip
+secret: ""
+
+# ==================== 其他优化 ====================
+global-client-fingerprint: chrome
+ntp:
+  enable: true
+  server: time.apple.com
+  interval: 30
+
+# ==================== 策略组框架（示例，可按订阅节点调整） ====================
+proxy-groups:
+  - name: "🚀 节点选择"
+    type: select
+    proxies:
+      - "自动选择"
+      - "香港"
+      - "台湾"
+      - "日本"
+      - "新加坡"
+      - "美国"
+      - "其他地区"
+      - DIRECT
+
+  - name: "📊 自动选择"
+    type: url-test
+    url: "https://www.gstatic.com/generate_204"
+    interval: 300
+    tolerance: 50
+    proxies: []  # 订阅节点会自动填充，或用 include-all: true
+
+  - name: "🇭🇰 香港"
+    type: select
+    include-all: true
+    filter: "(?i)港|hk|hongkong"
+
+  - name: "🇹🇼 台湾"
+    type: select
+    include-all: true
+    filter: "(?i)台|tw|taiwan"
+
+  - name: "🇯🇵 日本"
+    type: select
+    include-all: true
+    filter: "(?i)日本|jp|japan"
+
+  - name: "🇸🇬 新加坡"
+    type: select
+    include-all: true
+    filter: "(?i)新加坡|sg|singapore"
+
+  - name: "🇺🇸 美国"
+    type: select
+    include-all: true
+    filter: "(?i)美|us|unitedstates"
+
+  - name: "📺 Netflix"
+    type: select
+    proxies:
+      - "节点选择"
+      - DIRECT
+
+  - name: "🌐 国外媒体"
+    type: select
+    proxies:
+      - "节点选择"
+      - DIRECT
+
+  - name: "📱 国内直连"
+    type: select
+    proxies:
+      - DIRECT
+      - "节点选择"
+
+# ==================== 规则（基础框架，推荐结合 rule-providers 使用） ====================
+rules:
+  # 常见直连
+  - GEOIP,CN,DIRECT
+  - GEOSITE,CN,DIRECT
+  - GEOSITE,private,DIRECT
+
+  # 常见应用/服务
+  - DOMAIN-SUFFIX,netflix.com,Netflix
+  - DOMAIN-SUFFIX,nflxvideo.net,Netflix
+  - DOMAIN-SUFFIX,disneyplus.com,🌐 国外媒体
+
+  # 最终兜底
+  - MATCH,🚀 节点选择

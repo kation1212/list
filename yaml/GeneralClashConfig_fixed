@@ -1,0 +1,125 @@
+# GeneralClashConfig — 修复版（启用 DNS fake-ip）
+# 基于 ACL4SSR/GeneralClashConfig.yml，取消注释并优化 DNS 配置
+#
+# 使用方法：
+#   1. 将此文件上传至 GitHub Gist（或任何 subconverter 可访问的地址）
+#   2. 在 INI 配置中将 clash_rule_base 改为该文件的 raw URL
+#   3. 或在 Clash 客户端中手动添加以下 DNS 配置
+
+# ===== 基础设置 =====
+mixed-port: 7890
+socks-port: 7891
+allow-lan: true
+bind-address: "*"
+ipv6: false
+log-level: info
+external-controller: 127.0.0.1:9090
+mode: rule
+tcp-concurrent: true
+
+# ===== DNS 配置（核心修复）=====
+# 原 ACL4SSR 模板中此段全部被注释，导致 DNS 污染和 GEOIP 失效
+dns:
+  enable: true
+  ipv6: false
+  listen: 0.0.0.0:53
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+
+  # fake-ip 过滤列表：以下域名使用真实 IP（不走 fake-ip）
+  # 包含：局域网、NTP、国内音乐、游戏联机、推送服务等需要真实 IP 的域名
+  fake-ip-filter:
+    - "*.lan"
+    - "*.local"
+    - "*.localdomain"
+    - "localhost.ptlogin2.qq.com"
+    - "+.msftconnecttest.com"
+    - "+.msftncsi.com"
+    # NTP 时间服务
+    - "time.*.com"
+    - "time.*.gov"
+    - "time.*.apple.com"
+    - "ntp.*.com"
+    - "*.ntp.org.cn"
+    - "+.pool.ntp.org"
+    - "time1.cloud.tencent.com"
+    # 游戏联机（STUN/P2P 需要真实 IP）
+    - "+.stun.*.*"
+    - "+.stun.*.*.*"
+    - "+.stun.playstation.net"
+    - "xbox.*.xboxlive.com"
+    - "+.srv.nintendo.net"
+    # 国内音乐（CDN 需要真实 IP 就近分配）
+    - "+.music.163.com"
+    - "+.music.migu.cn"
+    - "*.kugou.com"
+    # 国内推送/登录服务
+    - "+.push.apple.com"
+    - "crl.globalsign.com"
+    - "crl.microsoft.com"
+
+  # 主 DNS（国内域名解析）— 使用国内 DoH，速度快、抗劫持
+  nameserver:
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+    - 223.5.5.5
+    - 119.29.29.29
+
+  # 备用 DNS（国外域名解析）— 被墙域名通过代理节点解析
+  fallback:
+    - https://dns.google/dns-query
+    - https://cloudflare-dns.com/dns-query
+    - tls://dns.google:853
+    - tls://1.1.1.1:853
+
+  # fallback 触发条件：
+  # 1. 主 DNS 返回的 IP 不在中国（GEOIP,CN 不匹配）→ 用 fallback 重新解析
+  # 2. 主 DNS 返回私有 IP 段 → 用 fallback 重新解析
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
+      - 0.0.0.0/32
+    domain:
+      - "+.google.com"
+      - "+.youtube.com"
+      - "+.github.com"
+      - "+.googleapis.com"
+      - "+.gstatic.com"
+
+# ===== Sniffer（域名嗅探，提升规则匹配准确率）=====
+# Clash Meta / mihomo 内核支持，旧版 Clash Premium 可删除此段
+sniffer:
+  enable: true
+  sniff:
+    HTTP:
+      ports: [80, 8080-8880]
+      override-destination: true
+    TLS:
+      ports: [443, 8443]
+  force-domain:
+    - "+.netflix.com"
+    - "+.nflxvideo.net"
+    - "+.youtube.com"
+    - "+.googlevideo.com"
+
+# ===== Clash for Windows Mixin =====
+# CFW 用户可通过 mixin 覆盖 DNS（与上方 dns 配置一致）
+cfw-profile-mixin:
+  dns:
+    enable: true
+    listen: :53
+    enhanced-mode: fake-ip
+    fake-ip-range: 198.18.0.1/16
+    nameserver:
+      - https://dns.alidns.com/dns-query
+      - https://doh.pub/dns-query
+      - 223.5.5.5
+      - 119.29.29.29
+    fallback:
+      - https://dns.google/dns-query
+      - https://cloudflare-dns.com/dns-query
+    fallback-filter:
+      geoip: true
+      geoip-code: CN

@@ -166,11 +166,7 @@ custom_proxy_group=🇰🇷 韩国节点`url-test`(KR|Korea|KOR|首尔|韩|韓)`
 enable_rule_generator=true
 overwrite_original_rules=true
 
-; [关键修复] 启用基础模板 — 原 GeneralClashConfig.yml 的 DNS 全部被注释，导致：
-;   1. 无 fake-ip → 被墙域名 DNS 污染 → 解析到错误 IP → 连接超时
-;   2. GEOIP,CN 规则无法正常工作 → 国内域名漏判走代理 → 超时
-; 解决方案：将此文件上传至 GitHub Gist，替换下面的 URL
-; 或在 Clash 客户端中手动开启 DNS（fake-ip 模式）
 clash_rule_base=https://raw.githubusercontent.com/kation1212/list/refs/heads/main/GeneralClashConfig_fixed.yml
+;clash_rule_base=https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/GeneralClashConfig.yml
 
 ;luck
